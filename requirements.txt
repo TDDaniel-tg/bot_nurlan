@@ -1,17 +1,16 @@
-python-telegram-bot==21.8
-PyPDF2==3.0.1
-pdfplumber==0.10.0
-openpyxl==3.1.5
-python-dotenv==1.0.0
-pillow==10.4.0
-APScheduler<4.0
+python-telegram-bot>=21.0
+PyPDF2>=3.0.0
+pdfplumber>=0.10.0
+openpyxl>=3.1.0
+python-dotenv>=1.0.0
+pillow>=10.0.0
+APScheduler>=3.10.0,<4.0
 pytz
 # OCR и обработка изображений
-pytesseract==0.3.10
-pdf2image==1.17.0
-opencv-python==4.10.0.84
+pytesseract>=0.3.10
+pdf2image>=1.17.0
+opencv-python-headless>=4.8.0
 # Claude API
-anthropic==0.40.0
+anthropic>=0.40.0
 # Дополнительные библиотеки
-numpy==1.26.4
-base64 
+numpy>=1.24.0 
