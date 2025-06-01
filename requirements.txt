@@ -13,4 +13,5 @@ opencv-python-headless>=4.8.0
 # Claude API
 anthropic>=0.40.0
 # Дополнительные библиотеки
-numpy>=1.24.0 
+numpy>=1.24.0
+pandas 
