@@ -17,6 +17,14 @@ logger = logging.getLogger(__name__)
 # Путь к локальному poppler
 POPPLER_PATH = os.path.join(os.path.dirname(__file__), "poppler", "poppler-24.08.0", "Library", "bin")
 
+# Проверяем, где мы запущены - локально или на сервере
+if os.path.exists(POPPLER_PATH):
+    # Локальная разработка на Windows
+    USE_POPPLER_PATH = POPPLER_PATH
+else:
+    # На сервере (Railway/Linux)
+    USE_POPPLER_PATH = os.environ.get('PDF2IMAGE_USE_POPPLER_PATH', None)
+
 class ImageProcessor:
     def __init__(self):
         self.claude_client = None
@@ -242,11 +250,16 @@ class ImageProcessor:
     
     def process_pdf_images(self, pdf_path: str) -> Dict:
         """
-        Обрабатывает PDF как набор изображений
+        Обрабатывает PDF файл как изображения (для сканированных документов)
         """
         try:
             # Конвертируем PDF в изображения
-            images = convert_from_path(pdf_path, dpi=300, poppler_path=POPPLER_PATH)
+            try:
+                images = convert_from_path(pdf_path, poppler_path=USE_POPPLER_PATH)
+            except Exception as e:
+                logger.error(f"Ошибка конвертации PDF с poppler_path={USE_POPPLER_PATH}: {e}")
+                # Пробуем без явного указания пути
+                images = convert_from_path(pdf_path)
             
             all_text = ""
             all_tables = []
