@@ -8,6 +8,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
 import hashlib
+from flask import Flask
+import threading
 
 # Импорты Telegram
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -431,5 +433,18 @@ def main():
     # Запуск бота
     app.run_polling()
 
+app = Flask(__name__)
+
+@app.route("/")
+def healthcheck():
+    return "OK", 200
+
+def run_flask():
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
 if __name__ == '__main__':
+    # Запуск Flask healthcheck в отдельном потоке
+    threading.Thread(target=run_flask, daemon=True).start()
     main() 

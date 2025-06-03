@@ -47,6 +47,7 @@ temp/
 # Система
 .DS_Store
 Thumbs.db
+create_env.py
 
 # Railway
 .railway/
