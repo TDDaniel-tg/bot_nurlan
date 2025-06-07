@@ -334,20 +334,41 @@ class PDFProcessor:
                 'organization_name': 'Название организации',
                 'inn': 'ИНН',
                 'kpp': 'КПП',
+                'ogrn': 'ОГРН',
+                'okpo': 'ОКПО',
+                'oktmo': 'ОКТМО',
+                'okato': 'ОКАТО',
+                'okfs': 'ОКФС',
                 'address': 'Адрес',
                 'director': 'Директор',
                 'phone': 'Телефон',
                 'email': 'Email',
+                'bank_name': 'Банк',
+                'bank_account': 'Расчетный счет',
+                'korr_account': 'Корр. счет',
+                'bik': 'БИК',
                 'license': 'Лицензия',
+                'registration_date': 'Дата регистрации',
                 'other': 'Дополнительная информация'
             }
         else:
             column_mapping = {
                 'fio': 'ФИО',
                 'birth_date': 'Дата рождения',
+                'age': 'Возраст',
                 'position': 'Должность',
                 'department': 'Отдел',
-                'harmful_factors': 'Факторы вредности',
+                'workplace': 'Место работы',
+                'address': 'Адрес',
+                'phone': 'Телефон',
+                'passport': 'Паспорт',
+                'snils': 'СНИЛС',
+                'medical_book': 'Мед. книжка',
+                'harmful_factors': 'Вредные факторы',
+                'diagnosis': 'Диагноз',
+                'recommendations': 'Рекомендации',
+                'exam_date': 'Дата осмотра',
+                'next_exam': 'След. осмотр',
                 'other': 'Дополнительная информация'
             }
         
@@ -359,9 +380,9 @@ class PDFProcessor:
         # Создаем заголовки
         headers = []
         if is_organization:
-            priority_keys = ['organization_name', 'inn', 'kpp', 'address', 'director', 'phone', 'email', 'license']
+            priority_keys = ['organization_name', 'inn', 'kpp', 'ogrn', 'address', 'director', 'phone', 'email', 'bank_name', 'bank_account', 'bik', 'license']
         else:
-            priority_keys = ['fio', 'birth_date', 'position', 'department', 'harmful_factors']
+            priority_keys = ['fio', 'birth_date', 'age', 'position', 'department', 'workplace', 'address', 'phone', 'medical_book', 'harmful_factors', 'exam_date']
         
         for key in priority_keys:
             if key in all_keys:
