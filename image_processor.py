@@ -22,8 +22,8 @@ if os.path.exists(POPPLER_PATH):
     # Локальная разработка на Windows
     USE_POPPLER_PATH = POPPLER_PATH
 else:
-    # На сервере (Railway/Linux)
-    USE_POPPLER_PATH = os.environ.get('PDF2IMAGE_USE_POPPLER_PATH', None)
+    # На сервере (Railway/Linux) - используем системный poppler
+    USE_POPPLER_PATH = None  # None означает использовать системный путь
 
 class ImageProcessor:
     def __init__(self):
@@ -64,7 +64,11 @@ class ImageProcessor:
         """
         try:
             # Конвертируем первую страницу в изображение
-            images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=150, poppler_path=POPPLER_PATH)
+            if USE_POPPLER_PATH:
+                images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=150, poppler_path=USE_POPPLER_PATH)
+            else:
+                images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=150)
+            
             if not images:
                 return False
             
@@ -148,8 +152,8 @@ class ImageProcessor:
             image.save(buffer, format='PNG')
             image_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
             
-            # Запрос к Claude 4 Sonnet
-            response = self.claude_client.messages.create(
+            # Запрос к Claude 4 Sonnet со streaming
+            with self.claude_client.messages.stream(
                 model="claude-sonnet-4-20250514",
                 max_tokens=64000,
                 messages=[
@@ -199,9 +203,12 @@ class ImageProcessor:
                     }
                 ],
                 temperature=0
-            )
-            
-            return response.content[0].text.strip()
+            ) as stream:
+                text_result = ""
+                for text in stream.text_stream:
+                    text_result += text
+                
+                return text_result.strip()
             
         except Exception as e:
             logger.error(f"Ошибка Claude API: {e}")
@@ -222,8 +229,8 @@ class ImageProcessor:
             image.save(buffer, format='PNG')
             image_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
             
-            # Запрос к Claude 4 Sonnet для извлечения таблиц
-            response = self.claude_client.messages.create(
+            # Запрос к Claude 4 Sonnet для извлечения таблиц со streaming
+            with self.claude_client.messages.stream(
                 model="claude-sonnet-4-20250514",
                 max_tokens=64000,
                 messages=[
@@ -301,12 +308,15 @@ class ImageProcessor:
                     }
                 ],
                 temperature=0
-            )
+            ) as stream:
+                json_result = ""
+                for text in stream.text_stream:
+                    json_result += text
             
             import json
             try:
                 # Пытаемся распарсить JSON ответ
-                result = json.loads(response.content[0].text.strip())
+                result = json.loads(json_result.strip())
                 if isinstance(result, list):
                     return result
             except json.JSONDecodeError:
@@ -325,11 +335,33 @@ class ImageProcessor:
         try:
             # Конвертируем PDF в изображения
             try:
-                images = convert_from_path(pdf_path, poppler_path=USE_POPPLER_PATH)
+                # Пробуем с настроенным путем
+                if USE_POPPLER_PATH:
+                    images = convert_from_path(pdf_path, poppler_path=USE_POPPLER_PATH)
+                else:
+                    # Используем системный poppler
+                    images = convert_from_path(pdf_path)
             except Exception as e:
                 logger.error(f"Ошибка конвертации PDF с poppler_path={USE_POPPLER_PATH}: {e}")
-                # Пробуем без явного указания пути
-                images = convert_from_path(pdf_path)
+                # Пробуем разные варианты
+                try:
+                    # Без указания пути
+                    images = convert_from_path(pdf_path)
+                except Exception as e2:
+                    logger.error(f"Ошибка конвертации PDF без пути: {e2}")
+                    # Пробуем с явным путем к системному poppler
+                    try:
+                        images = convert_from_path(pdf_path, poppler_path="/usr/bin")
+                    except Exception as e3:
+                        logger.error(f"Ошибка конвертации PDF с /usr/bin: {e3}")
+                        return {
+                            'success': False,
+                            'text': '',
+                            'pages': 0,
+                            'tables': [],
+                            'method': 'None',
+                            'error': f'Не удалось конвертировать PDF в изображения: {e3}'
+                        }
             
             all_text = ""
             all_tables = []
