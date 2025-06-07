@@ -309,16 +309,33 @@ class PDFProcessor:
         # Создаем новую рабочую книгу
         wb = Workbook()
         ws = wb.active
-        ws.title = "Медицинские осмотры"
         
-        # Определяем колонки
-        column_mapping = {
-            'fio': 'ФИО',
-            'birth_date': 'Дата рождения',
-            'position': 'Должность',
-            'harmful_factors': 'Факторы вредности',
-            'other': 'Дополнительная информация'
-        }
+        # Определяем тип данных и название листа
+        is_organization = any('organization_name' in row or 'inn' in row for row in data)
+        ws.title = "Организации" if is_organization else "Медицинские осмотры"
+        
+        # Определяем колонки в зависимости от типа документа
+        if is_organization:
+            column_mapping = {
+                'organization_name': 'Название организации',
+                'inn': 'ИНН',
+                'kpp': 'КПП',
+                'address': 'Адрес',
+                'director': 'Директор',
+                'phone': 'Телефон',
+                'email': 'Email',
+                'license': 'Лицензия',
+                'other': 'Дополнительная информация'
+            }
+        else:
+            column_mapping = {
+                'fio': 'ФИО',
+                'birth_date': 'Дата рождения',
+                'position': 'Должность',
+                'department': 'Отдел',
+                'harmful_factors': 'Факторы вредности',
+                'other': 'Дополнительная информация'
+            }
         
         # Находим все уникальные ключи в данных
         all_keys = set()
@@ -327,13 +344,18 @@ class PDFProcessor:
         
         # Создаем заголовки
         headers = []
-        for key in ['fio', 'birth_date', 'position', 'harmful_factors']:
+        if is_organization:
+            priority_keys = ['organization_name', 'inn', 'kpp', 'address', 'director', 'phone', 'email', 'license']
+        else:
+            priority_keys = ['fio', 'birth_date', 'position', 'department', 'harmful_factors']
+        
+        for key in priority_keys:
             if key in all_keys:
                 headers.append(column_mapping.get(key, key))
         
         # Добавляем остальные ключи
         for key in all_keys:
-            if key not in ['fio', 'birth_date', 'position', 'harmful_factors']:
+            if key not in priority_keys:
                 headers.append(column_mapping.get(key, key.title()))
         
         # Записываем заголовки
@@ -345,14 +367,13 @@ class PDFProcessor:
             cell.alignment = Alignment(horizontal="center")
         
         # Записываем данные
-        key_order = ['fio', 'birth_date', 'position', 'harmful_factors']
-        other_keys = [k for k in all_keys if k not in key_order]
+        other_keys = [k for k in all_keys if k not in priority_keys]
         
         for row_idx, row_data in enumerate(data, 2):
             col_idx = 1
             
             # Записываем основные колонки в порядке
-            for key in key_order:
+            for key in priority_keys:
                 if key in all_keys:
                     value = row_data.get(key, "")
                     ws.cell(row=row_idx, column=col_idx, value=value)
