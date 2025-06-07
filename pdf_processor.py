@@ -111,10 +111,25 @@ class PDFProcessor:
 
     def _process_scanned_pdf(self, file_path: str) -> Dict:
         """
-        Обработка PDF с помощью Claude API OCR
+        Обработка PDF с помощью Claude API
+        Приоритет: прямая обработка PDF -> обработка изображений -> fallback
         """
         try:
             logger.info(f"Обрабатываю PDF с Claude API: {file_path}")
+            
+            # Первый приоритет: прямая обработка PDF через Claude API (новый метод)
+            if hasattr(self.image_processor, 'process_pdf_direct_claude'):
+                logger.info("Пробую прямую обработку PDF через Claude API")
+                direct_result = self.image_processor.process_pdf_direct_claude(file_path)
+                
+                if direct_result['success'] and direct_result.get('text'):
+                    logger.info(f"Прямая обработка успешна: {len(direct_result['text'])} символов, {len(direct_result.get('tables', []))} записей")
+                    return direct_result
+                else:
+                    logger.warning(f"Прямая обработка не дала результата: {direct_result.get('error', 'Неизвестная ошибка')}")
+            
+            # Второй приоритет: обработка через изображения (старый метод)
+            logger.info("Использую обработку через конвертацию в изображения")
             result = self.image_processor.process_pdf_images(file_path)
             
             # Добавляем информацию о методе обработки
