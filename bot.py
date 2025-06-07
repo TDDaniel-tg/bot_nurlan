@@ -420,6 +420,14 @@ class DocumentBot:
 
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик ошибок"""
+        error_message = str(context.error)
+        
+        # Обрабатываем конфликт экземпляров
+        if "Conflict: terminated by other getUpdates request" in error_message:
+            logger.warning("Обнаружен конфликт экземпляров бота - игнорируем")
+            return
+        
+        # Обрабатываем другие ошибки
         logger.error(f"Ошибка: {context.error}")
         
         if update and update.effective_message:
@@ -438,7 +446,7 @@ def main():
     # Создание экземпляра бота
     bot = DocumentBot()
     
-    # Создание приложения
+    # Создание приложения с обработкой конфликтов
     app = Application.builder().token(BOT_TOKEN).build()
     
     # Регистрация обработчиков
@@ -453,8 +461,16 @@ def main():
     
     print("✅ Бот запущен и готов к работе!")
     
-    # Запуск бота
-    app.run_polling()
+    # Запуск бота с обработкой конфликтов
+    try:
+        app.run_polling(
+            drop_pending_updates=True,  # Игнорируем старые обновления
+            close_loop=False
+        )
+    except Exception as e:
+        logger.error(f"Ошибка запуска бота: {e}")
+        print(f"❌ Ошибка запуска: {e}")
+        print("🔄 Попробуйте перезапустить бота через несколько секунд")
 
 app = Flask(__name__)
 

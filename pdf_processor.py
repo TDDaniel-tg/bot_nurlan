@@ -20,22 +20,32 @@ class PDFProcessor:
     def process_pdf(self, file_path: str) -> Dict:
         """
         Основной метод обработки PDF файлов
-        Определяет тип PDF (текстовый или сканированный) и применяет соответствующий метод
+        Всегда использует Claude API для максимальной точности извлечения данных
         """
         try:
-            logger.info(f"Начинаю обработку PDF: {file_path}")
+            logger.info(f"Начинаю обработку PDF с Claude API: {file_path}")
             
-            # Сначала пробуем обычное извлечение текста
-            text_result = self._extract_text_standard(file_path)
-            
-            # Если текста мало или его нет, применяем OCR
-            if not text_result['text'] or len(text_result['text'].strip()) < 50:
-                logger.info("Мало текста найдено стандартным методом, применяю OCR")
+            # Проверяем доступность Claude API
+            if hasattr(self.image_processor, 'claude_client') and self.image_processor.claude_client:
+                logger.info("Использую Claude API для обработки PDF")
                 return self._process_scanned_pdf(file_path)
-            
-            # Если есть достаточно текста, возвращаем стандартный результат
-            logger.info("Найден достаточный объем текста стандартным методом")
-            return text_result
+            else:
+                logger.warning("Claude API недоступен, использую стандартный метод")
+                # Fallback на стандартный метод только если Claude недоступен
+                text_result = self._extract_text_standard(file_path)
+                
+                # Если и стандартный метод не дал результата
+                if not text_result['text'] or len(text_result['text'].strip()) < 10:
+                    return {
+                        'success': False,
+                        'text': '',
+                        'pages': 0,
+                        'tables': [],
+                        'method': 'Error',
+                        'error': 'Claude API недоступен и стандартный метод не извлек данные'
+                    }
+                
+                return text_result
             
         except Exception as e:
             logger.error(f"Ошибка при обработке PDF {file_path}: {e}")
@@ -101,16 +111,20 @@ class PDFProcessor:
 
     def _process_scanned_pdf(self, file_path: str) -> Dict:
         """
-        Обработка сканированного PDF с помощью OCR
+        Обработка PDF с помощью Claude API OCR
         """
         try:
-            logger.info(f"Обрабатываю сканированный PDF: {file_path}")
+            logger.info(f"Обрабатываю PDF с Claude API: {file_path}")
             result = self.image_processor.process_pdf_images(file_path)
             
             # Добавляем информацию о методе обработки
             if result['success']:
-                result['method'] = f"OCR ({result.get('method', 'Unknown')})"
-                logger.info(f"Сканированный PDF обработан успешно методом: {result['method']}")
+                result['method'] = f"Claude API OCR ({result.get('method', 'Unknown')})"
+                tables_count = len(result.get('tables', []))
+                text_length = len(result.get('text', ''))
+                logger.info(f"PDF обработан Claude API: метод={result['method']}, таблиц={tables_count}, символов={text_length}")
+            else:
+                logger.error(f"Ошибка Claude API обработки: {result.get('error', 'Unknown')}")
             
             return result
             
